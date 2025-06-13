@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Rejection Reason Sankey Diagram (by Quarter)</title>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Tailwind gray-50 */
+        }
+        /* Style for the chart tooltips */
+        .google-visualization-tooltip {
+            font-family: 'Inter', sans-serif !important;
+            border-radius: 8px !important;
+            padding: 12px !important;
+            background-color: #ffffff !important;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+    </style>
+</head>
+<body class="antialiased text-gray-800">
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <header class="text-center mb-10">
+            <h1 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Quarterly Transaction Flow Analysis</h1>
+            <p class="mt-2 text-lg text-gray-600">Sankey diagram illustrating the percentage of transactions by rejection reason for Q1 and QTD Q2.</p>
+        </header>
+
+        <div class="bg-white rounded-xl shadow-lg p-2 sm:p-4">
+            <!-- Container for the Google Chart -->
+            <div id="sankey_chart" style="width: 100%; height: 1200px;"></div>
+        </div>
+        
+        <!-- Download Button -->
+        <div class="text-center mt-6">
+            <button id="download_btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                Download as PNG
+            </button>
+        </div>
+
+        <footer class="text-center mt-10 text-gray-500 text-sm">
+            <p>Data processed from 'Untitled (84).csv' and 'Transaction Rejection Reason' files.</p>
+        </footer>
+    </div>
+
+    <script type="text/javascript">
+        // Declare chart variable in a higher scope to be accessible later
+        var chart;
+
+        // Load the Google Charts library with the 'sankey' package.
+        google.charts.load('current', {'packages':['sankey']});
+        // Set a callback to run when the library is loaded.
+        google.charts.setOnLoadCallback(drawChart);
+
+        function drawChart() {
+            var data = new google.visualization.DataTable();
+            // Define the columns for the DataTable: From (source), To (target), Weight (value).
+            data.addColumn('string', 'From');
+            data.addColumn('string', 'To');
+            data.addColumn('number', 'Weight');
+
+            // --- Data Processing ---
+            
+            // 1. Mapping from status_reason_id to a human-readable reason.
+            const reasonMap = {
+                '0000': 'Approved',
+                '1001': 'Card Expired',
+                '1002': 'Card Suspicious',
+                '1003': 'Card Suspended',
+                '1004': 'Card Stolen',
+                '1005': 'Card Lost',
+                '1006': 'Allowable PIN tries exceeded',
+                '1007': 'Refer to card issuer',
+                '1011': 'Card Not Found',
+                '1016': 'Not Sufficient Funds',
+                '1017': 'Incorrect PIN',
+                '1022': 'Security Violation',
+                '1802': 'Missing fields',
+                '1804': 'Incorrect Expiry Date',
+                '1806': 'Card not active',
+                '1808': 'Card not configured',
+                '1809': 'Card Permanently Closed',
+                '1810': 'Incorrect ARQC',
+                '1813': 'Cardholder not active',
+                '1816': 'Card Terminated by Issuer',
+                '1817': 'Usage Limit Reached',
+                '1829': 'Max Amount Limit Reached',
+                '1836': 'Chip Fallback not allowed',
+                '1851': 'Fraud check reject',
+                '1852': 'Fraud check error',
+                '1862': 'ATM transaction not allowed',
+                '1870': 'E-commerce without CVV2 not allowed',
+                '1879': 'Restricted MCC',
+                '1880': 'Country not allowed',
+                '1896': 'Transaction Limit Exceeded',
+                '1897': 'Max Amount Limit Reached',
+                '9999': 'System Error',
+                '0885': 'Unknown Reason (0885)',
+                'Unknown': 'Reason Not Specified'
+            };
+            
+            // 2. Raw data from 'Untitled (84).csv'.
+            const csvData = `transaction_month,status_reason_id,transaction_count
+2025-01-01T00:00:00.000Z,P0000,157420
+2025-01-01T00:00:00.000Z,P1001,9
+2025-01-01T00:00:00.000Z,P1002,242
+2025-01-01T00:00:00.000Z,P1003,2312
+2025-01-01T00:00:00.000Z,P1005,1
+2025-01-01T00:00:00.000Z,P1006,10
+2025-01-01T00:00:00.000Z,P1011,3
+2025-01-01T00:00:00.000Z,P1016,7334
+2025-01-01T00:00:00.000Z,P1017,527
+2025-01-01T00:00:00.000Z,P1022,316
+2025-01-01T00:00:00.000Z,P1802,41
+2025-01-01T00:00:00.000Z,P1804,378
+2025-01-01T00:00:00.000Z,P1806,677
+2025-01-01T00:00:00.000Z,P1808,3
+2025-01-01T00:00:00.000Z,P1809,777
+2025-01-01T00:00:00.000Z,P1810,24
+2025-01-01T00:00:00.000Z,P1813,669
+2025-01-01T00:00:00.000Z,P1816,143
+2025-01-01T00:00:00.000Z,P1817,37
+2025-01-01T00:00:00.000Z,P1829,99
+2025-01-01T00:00:00.000Z,P1836,23
+2025-01-01T00:00:00.000Z,P1851,1307
+2025-01-01T00:00:00.000Z,P1862,100
+2025-01-01T00:00:00.000Z,P1879,446
+2025-01-01T00:00:00.000Z,P1880,476
+2025-01-01T00:00:00.000Z,P1896,1790
+2025-01-01T00:00:00.000Z,P1897,2258
+2025-01-01T00:00:00.000Z,P9999,1
+2025-01-01T00:00:00.000Z,,143
+2025-02-01T00:00:00.000Z,P0000,168310
+2025-02-01T00:00:00.000Z,P0885,89
+2025-02-01T00:00:00.000Z,P1002,102
+2025-02-01T00:00:00.000Z,P1003,2470
+2025-02-01T00:00:00.000Z,P1005,13
+2025-02-01T00:00:00.000Z,P1006,20
+2025-02-01T00:00:00.000Z,P1011,3
+2025-02-01T00:00:00.000Z,P1016,7998
+2025-02-01T00:00:00.000Z,P1017,536
+2025-02-01T00:00:00.000Z,P1022,351
+2025-02-01T00:00:00.000Z,P1802,17
+2025-02-01T00:00:00.000Z,P1804,414
+2025-02-01T00:00:00.000Z,P1806,515
+2025-02-01T00:00:00.000Z,P1808,7
+2025-02-01T00:00:00.000Z,P1809,1340
+2025-02-01T00:00:00.000Z,P1810,1
+2025-02-01T00:00:00.000Z,P1813,884
+2025-02-01T00:00:00.000Z,P1816,132
+2025-02-01T00:00:00.000Z,P1817,1
+2025-02-01T00:00:00.000Z,P1829,116
+2025-02-01T00:00:00.000Z,P1836,31
+2025-02-01T00:00:00.000Z,P1851,1290
+2025-02-01T00:00:00.000Z,P1862,132
+2025-02-01T00:00:00.000Z,P1870,9
+2025-02-01T00:00:00.000Z,P1879,416
+2025-02-01T00:00:00.000Z,P1880,355
+2025-02-01T00:00:00.000Z,P1896,1976
+2025-02-01T00:00:00.000Z,P1897,2280
+2025-02-01T00:00:00.000Z,,134
+2025-03-01T00:00:00.000Z,P0000,169463
+2025-03-01T00:00:00.000Z,P1001,1
+2025-03-01T00:00:00.000Z,P1002,176
+2025-03-01T00:00:00.000Z,P1003,2714
+2025-03-01T00:00:00.000Z,P1005,5
+2025-03-01T00:00:00.000Z,P1006,13
+2025-03-01T00:00:00.000Z,P1011,389
+2025-03-01T00:00:00.000Z,P1016,8161
+2025-03-01T00:00:00.000Z,P1017,540
+2025-03-01T00:00:00.000Z,P1022,358
+2025-03-01T00:00:00.000Z,P1802,16
+2025-03-01T00:00:00.000Z,P1804,434
+2025-03-01T00:00:00.000Z,P1806,423
+2025-03-01T00:00:00.000Z,P1808,5
+2025-03-01T00:00:00.000Z,P1809,1600
+2025-03-01T00:00:00.000Z,P1810,2
+2025-03-01T00:00:00.000Z,P1813,988
+2025-03-01T00:00:00.000Z,P1816,97
+2025-03-01T00:00:00.000Z,P1817,2
+2025-03-01T00:00:00.000Z,P1829,121
+2025-03-01T00:00:00.000Z,P1836,35
+2025-03-01T00:00:00.000Z,P1851,2363
+2025-03-01T00:00:00.000Z,P1862,88
+2025-03-01T00:00:00.000Z,P1879,358
+2025-03-01T00:00:00.000Z,P1880,438
+2025-03-01T00:00:00.000Z,P1896,2555
+2025-03-01T00:00:00.000Z,P1897,2084
+2025-03-01T00:00:00.000Z,P9999,7
+2025-03-01T00:00:00.000Z,,145
+2025-04-01T00:00:00.000Z,P0000,195977
+2025-04-01T00:00:00.000Z,P1002,40
+2025-04-01T00:00:00.000Z,P1003,3722
+2025-04-01T00:00:00.000Z,P1005,7
+2025-04-01T00:00:00.000Z,P1006,24
+2025-04-01T00:00:00.000Z,P1011,421
+2025-04-01T00:00:00.000Z,P1016,8670
+2025-04-01T00:00:00.000Z,P1017,646
+2025-04-01T00:00:00.000Z,P1022,353
+2025-04-01T00:00:00.000Z,P1802,30
+2025-04-01T00:00:00.000Z,P1804,1761
+2025-04-01T00:00:00.000Z,P1806,528
+2025-04-01T00:00:00.000Z,P1808,6
+2025-04-01T00:00:00.000Z,P1809,3437
+2025-04-01T00:00:00.000Z,P1810,42
+2025-04-01T00:00:00.000Z,P1813,1382
+2025-04-01T00:00:00.000Z,P1816,114
+2025-04-01T00:00:00.000Z,P1817,5
+2025-04-01T00:00:00.000Z,P1829,142
+2025-04-01T00:00:00.000Z,P1836,10
+2025-04-01T00:00:00.000Z,P1851,2554
+2025-04-01T00:00:00.000Z,P1862,94
+2025-04-01T00:00:00.000Z,P1879,420
+2025-04-01T00:00:00.000Z,P1880,506
+2025-04-01T00:00:00.000Z,P1896,1885
+2025-04-01T00:00:00.000Z,P1897,2372
+2025-04-01T00:00:00.000Z,P9999,4
+2025-04-01T00:00:00.000Z,,210
+2025-05-01T00:00:00.000Z,P0000,216012
+2025-05-01T00:00:00.000Z,P0885,1
+2025-05-01T00:00:00.000Z,P1001,6
+2025-05-01T00:00:00.000Z,P1002,7
+2025-05-01T00:00:00.000Z,P1003,3626
+2025-05-01T00:00:00.000Z,P1005,9
+2025-05-01T00:00:00.000Z,P1006,27
+2025-05-01T00:00:00.000Z,P1011,168
+2025-05-01T00:00:00.000Z,P1016,10609
+2025-05-01T00:00:00.000Z,P1017,700
+2025-05-01T00:00:00.000Z,P1022,369
+2025-05-01T00:00:00.000Z,P1802,57
+2025-05-01T00:00:00.000Z,P1804,452
+2025-05-01T00:00:00.000Z,P1806,452
+2025-05-01T00:00:00.000Z,P1808,7
+2025-05-01T00:00:00.000Z,P1809,3012
+2025-05-01T00:00:00.000Z,P1813,2200
+2025-05-01T00:00:00.000Z,P1816,114
+2025-05-01T00:00:00.000Z,P1829,167
+2025-05-01T00:00:00.000Z,P1836,45
+2025-05-01T00:00:00.000Z,P1851,1534
+2025-05-01T00:00:00.000Z,P1852,1
+2025-05-01T00:00:00.000Z,P1862,158
+2025-05-01T00:00:00.000Z,P1879,456
+2025-05-01T00:00:00.000Z,P1880,560
+2025-05-01T00:00:00.000Z,P1896,1870
+2025-05-01T00:00:00.000Z,P1897,2642
+2025-05-01T00:00:00.000Z,P9999,5
+2025-05-01T00:00:00.000Z,,161`;
+            
+            // 3. Process and aggregate the raw CSV data into quarters.
+            const quarterlyData = {
+              "Q1 2025": { total: 0, reasons: {} },
+              "Q2 2025 (QTD)": { total: 0, reasons: {} }
+            };
+
+            const rows = csvData.trim().split('\n').slice(1);
+            
+            rows.forEach(row => {
+                const [dateStr, reasonId, countStr] = row.split(',');
+                if (!dateStr || !countStr || !/^\d+$/.test(countStr)) return;
+
+                const month = new Date(dateStr).getMonth();
+                const count = parseInt(countStr, 10);
+                
+                let quarterName;
+                if (month >= 0 && month <= 2) { // Jan, Feb, Mar
+                    quarterName = "Q1 2025";
+                } else if (month >= 3 && month <= 5) { // Apr, May, Jun
+                    quarterName = "Q2 2025 (QTD)";
+                } else {
+                    return; // Skip data outside the specified quarters
+                }
+
+                const code = reasonId ? reasonId.replace('P', '') : 'Unknown';
+                const reasonText = reasonMap[code] || `Unknown Code (${code})`;
+                
+                // Aggregate counts per quarter
+                quarterlyData[quarterName].total += count;
+                if (quarterlyData[quarterName].reasons[reasonText]) {
+                    quarterlyData[quarterName].reasons[reasonText] += count;
+                } else {
+                    quarterlyData[quarterName].reasons[reasonText] = count;
+                }
+            });
+
+            // 4. Calculate total counts for each reason across all quarters
+            const totalReasonCounts = {};
+            for (const quarterName in quarterlyData) {
+                const quarter = quarterlyData[quarterName];
+                for (const reasonText in quarter.reasons) {
+                    if (totalReasonCounts[reasonText]) {
+                        totalReasonCounts[reasonText] += quarter.reasons[reasonText];
+                    } else {
+                        totalReasonCounts[reasonText] = quarter.reasons[reasonText];
+                    }
+                }
+            }
+            
+            // 5. Calculate percentages and populate the DataTable with new labels
+            for (const quarterName in quarterlyData) {
+                const quarter = quarterlyData[quarterName];
+                if (quarter.total === 0) continue;
+
+                for (const reasonText in quarter.reasons) {
+                    const count = quarter.reasons[reasonText];
+                    const totalCount = totalReasonCounts[reasonText];
+                    
+                    // The label now includes the total transaction count for that reason
+                    const labelWithCount = `${reasonText} (${new Intl.NumberFormat().format(totalCount)})`;
+
+                    const percentage = (count / quarter.total) * 100;
+                    if (percentage > 0) {
+                         // Add the row for the Sankey diagram
+                         data.addRow([quarterName, labelWithCount, percentage]);
+                    }
+                }
+            }
+
+            // --- Chart Options ---
+            var options = {
+                 height: 1200,
+                 sankey: {
+                    node: {
+                        label: { 
+                            fontName: 'Inter',
+                            fontSize: 14,
+                            color: '#1f2937',
+                            bold: false,
+                        },
+                        labelPadding: 10,
+                        nodePadding: 30,
+                        width: 30,
+                    },
+                    link: {
+                        colorMode: 'gradient',
+                        colors: [
+                            '#60a5fa', '#34d399', '#facc15', '#fb923c', '#f87171', 
+                            '#a78bfa', '#c084fc', '#f472b6', '#4ade80'
+                        ]
+                    }
+                },
+                 tooltip: {
+                    isHtml: true,
+                }
+            };
+
+            // Instantiate and draw our chart.
+            chart = new google.visualization.Sankey(document.getElementById('sankey_chart'));
+            
+            // A custom formatter to display the values as percentages in the tooltip
+            var formatter = new google.visualization.NumberFormat({
+                pattern: '#,##0.00\'%\''
+            });
+            formatter.format(data, 2); // Apply formatter to the 3rd column (index 2)
+
+            chart.draw(data, options);
+            
+            // Redraw chart on window resize
+            window.addEventListener('resize', function() {
+                chart.draw(data, options);
+            }, false);
+
+            // Set up the download button listener
+            document.getElementById('download_btn').addEventListener('click', function() {
+                // Get the chart's image URI
+                var imgUri = chart.getImageURI();
+                
+                // Create a temporary link to trigger the download
+                var a = document.createElement('a');
+                a.href = imgUri;
+                a.download = 'sankey_diagram.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            });
+        }
+    </script>
+</body>
+</html>
